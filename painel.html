@@ -1009,11 +1009,9 @@
                 
                 // Verificar se é administrador
                 try {
-                    const adminSnapshot = await db.collection('admins')
-                        .where('email', '==', user.email)
-                        .get();
-                    
-                    isAdmin = !adminSnapshot.empty;
+                    // Modificação: Usar uma consulta mais eficiente
+                    const adminDoc = await db.collection('admins').doc(user.email).get();
+                    isAdmin = adminDoc.exists;
                     
                     if (isAdmin) {
                         // Mostrar aba de administrador apenas para o admin
