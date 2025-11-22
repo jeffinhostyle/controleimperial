@@ -1002,50 +1002,59 @@
         let currentUser = null;
         let isAdmin = false;
 
+        // Lista de administradores (método alternativo enquanto os índices não estão prontos)
+        const adminEmails = [
+            "jeffinho.oliveira94@gmail.com"
+            // Adicione outros emails de administradores aqui
+        ];
+
         // Verificar se o usuário está logado
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 currentUser = user;
                 
-                // Verificar se é administrador
+                // Verificar se é administrador - método alternativo enquanto o índice não está pronto
+                isAdmin = adminEmails.includes(user.email);
+                
+                // Tentar verificar usando o Firestore (se o índice já estiver pronto)
                 try {
-                    // Usando o documento com o email como ID
                     const adminDoc = await db.collection('admins').doc(user.email).get();
-                    isAdmin = adminDoc.exists;
-                    
-                    if (isAdmin) {
-                        // Mostrar aba de administrador apenas para o admin
-                        document.querySelectorAll('.admin-only').forEach(el => {
-                            el.style.display = 'flex';
-                        });
-                    }
-                    
-                    document.getElementById('userEmail').textContent = user.email;
-                    
-                    // Configurar navegação
-                    setupNavigation();
-                    
-                    // Configurar formulários
-                    setupForms();
-                    
-                    // Configurar modais
-                    setupModals();
-                    
-                    // Configurar relatórios
-                    setupReports();
-                    
-                    // Carregar dados iniciais
-                    loadDashboard();
-                    loadIncomes();
-                    loadExpenses();
-                    loadDebts();
-                    
-                    if (isAdmin) {
-                        loadAdminUsers();
+                    if (adminDoc.exists) {
+                        isAdmin = true;
                     }
                 } catch (error) {
-                    console.error("Erro ao verificar administrador:", error);
-                    showNotification('Erro ao verificar permissões!', 'error');
+                    console.log("Índice de admins ainda não está pronto, usando lista estática");
+                }
+                
+                if (isAdmin) {
+                    // Mostrar aba de administrador apenas para o admin
+                    document.querySelectorAll('.admin-only').forEach(el => {
+                        el.style.display = 'flex';
+                    });
+                }
+                
+                document.getElementById('userEmail').textContent = user.email;
+                
+                // Configurar navegação
+                setupNavigation();
+                
+                // Configurar formulários
+                setupForms();
+                
+                // Configurar modais
+                setupModals();
+                
+                // Configurar relatórios
+                setupReports();
+                
+                // Carregar dados iniciais
+                loadDashboard();
+                loadIncomes();
+                loadExpenses();
+                loadDebts();
+                
+                if (isAdmin) {
+                    loadAdminUsers();
                 }
             } else {
                 // Redirecionar para a página de login se não estiver autenticado
@@ -1517,10 +1526,16 @@
 
         // Carregar ganhos
         function loadIncomes() {
-            db.collection('incomes')
-                .where('userId', '==', currentUser.uid)
-                .orderBy('date', 'desc')
-                .get()
+            // Tentar usar orderBy se o índice estiver pronto, senão carregar sem ordenar
+            let query = db.collection('incomes').where('userId', '==', currentUser.uid);
+            
+            try {
+                query = query.orderBy('date', 'desc');
+            } catch (error) {
+                console.log("Índice de incomes ainda não está pronto, carregando sem ordenação");
+            }
+            
+            query.get()
                 .then((snapshot) => {
                     const incomesList = document.getElementById('incomesList');
                     
@@ -1532,10 +1547,20 @@
                         return;
                     }
                     
+                    // Ordenar manualmente se não conseguiu usar orderBy
+                    const incomes = [];
+                    snapshot.forEach((doc) => {
+                        incomes.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // Ordenar por data (mais recente primeiro) se não usou orderBy
+                    if (!snapshot._query._orderBy.length) {
+                        incomes.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    }
+                    
                     incomesList.innerHTML = '';
                     
-                    snapshot.forEach((doc) => {
-                        const income = doc.data();
+                    incomes.forEach((income) => {
                         const formattedDate = new Date(income.date).toLocaleDateString('pt-BR');
                         
                         const row = document.createElement('tr');
@@ -1544,10 +1569,10 @@
                             <td>${income.description || '-'}</td>
                             <td>R$ ${income.value.toFixed(2).replace('.', ',')}</td>
                             <td>
-                                <button class="action-btn edit" onclick="editIncome('${doc.id}')">
+                                <button class="action-btn edit" onclick="editIncome('${income.id}')">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="action-btn delete" onclick="deleteIncome('${doc.id}')">
+                                <button class="action-btn delete" onclick="deleteIncome('${income.id}')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -1564,10 +1589,16 @@
 
         // Carregar gastos
         function loadExpenses() {
-            db.collection('expenses')
-                .where('userId', '==', currentUser.uid)
-                .orderBy('date', 'desc')
-                .get()
+            // Tentar usar orderBy se o índice estiver pronto, senão carregar sem ordenar
+            let query = db.collection('expenses').where('userId', '==', currentUser.uid);
+            
+            try {
+                query = query.orderBy('date', 'desc');
+            } catch (error) {
+                console.log("Índice de expenses ainda não está pronto, carregando sem ordenação");
+            }
+            
+            query.get()
                 .then((snapshot) => {
                     const expensesList = document.getElementById('expensesList');
                     
@@ -1579,10 +1610,20 @@
                         return;
                     }
                     
+                    // Ordenar manualmente se não conseguiu usar orderBy
+                    const expenses = [];
+                    snapshot.forEach((doc) => {
+                        expenses.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // Ordenar por data (mais recente primeiro) se não usou orderBy
+                    if (!snapshot._query._orderBy.length) {
+                        expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    }
+                    
                     expensesList.innerHTML = '';
                     
-                    snapshot.forEach((doc) => {
-                        const expense = doc.data();
+                    expenses.forEach((expense) => {
                         const formattedDate = new Date(expense.date).toLocaleDateString('pt-BR');
                         
                         const row = document.createElement('tr');
@@ -1592,10 +1633,10 @@
                             <td>${expense.description || '-'}</td>
                             <td>R$ ${expense.value.toFixed(2).replace('.', ',')}</td>
                             <td>
-                                <button class="action-btn edit" onclick="editExpense('${doc.id}')">
+                                <button class="action-btn edit" onclick="editExpense('${expense.id}')">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="action-btn delete" onclick="deleteExpense('${doc.id}')">
+                                <button class="action-btn delete" onclick="deleteExpense('${expense.id}')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -1684,10 +1725,16 @@
 
         // Carregar dívidas
         function loadDebts() {
-            db.collection('debts')
-                .where('userId', '==', currentUser.uid)
-                .orderBy('dueDate')
-                .get()
+            // Tentar usar orderBy se o índice estiver pronto, senão carregar sem ordenar
+            let query = db.collection('debts').where('userId', '==', currentUser.uid);
+            
+            try {
+                query = query.orderBy('dueDate');
+            } catch (error) {
+                console.log("Índice de debts ainda não está pronto, carregando sem ordenação");
+            }
+            
+            query.get()
                 .then((snapshot) => {
                     const debtsList = document.getElementById('debtsList');
                     
@@ -1699,10 +1746,20 @@
                         return;
                     }
                     
+                    // Ordenar manualmente se não conseguiu usar orderBy
+                    const debts = [];
+                    snapshot.forEach((doc) => {
+                        debts.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // Ordenar por data de vencimento (mais próxima primeiro) se não usou orderBy
+                    if (!snapshot._query._orderBy.length) {
+                        debts.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                    }
+                    
                     debtsList.innerHTML = '';
                     
-                    snapshot.forEach((doc) => {
-                        const debt = doc.data();
+                    debts.forEach((debt) => {
                         const dueDate = new Date(debt.dueDate);
                         const formattedDate = dueDate.toLocaleDateString('pt-BR');
                         const today = new Date();
@@ -1835,25 +1892,29 @@
             // Carregar ganhos no período
             db.collection('incomes')
                 .where('userId', '==', currentUser.uid)
-                .where('date', '>=', startDate.toISOString().split('T')[0])
-                .where('date', '<=', endDate.toISOString().split('T')[0])
                 .get()
                 .then((snapshot) => {
                     const filteredIncomes = [];
                     snapshot.forEach((doc) => {
-                        filteredIncomes.push({ id: doc.id, ...doc.data() });
+                        const income = doc.data();
+                        const incomeDate = new Date(income.date);
+                        if (incomeDate >= startDate && incomeDate <= endDate) {
+                            filteredIncomes.push({ id: doc.id, ...income });
+                        }
                     });
                     
                     // Carregar gastos no período
                     return db.collection('expenses')
                         .where('userId', '==', currentUser.uid)
-                        .where('date', '>=', startDate.toISOString().split('T')[0])
-                        .where('date', '<=', endDate.toISOString().split('T')[0])
                         .get()
                         .then((snapshot) => {
                             const filteredExpenses = [];
                             snapshot.forEach((doc) => {
-                                filteredExpenses.push({ id: doc.id, ...doc.data() });
+                                const expense = doc.data();
+                                const expenseDate = new Date(expense.date);
+                                if (expenseDate >= startDate && expenseDate <= endDate) {
+                                    filteredExpenses.push({ id: doc.id, ...expense });
+                                }
                             });
                             
                             // Calcular totais
