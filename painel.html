@@ -1009,7 +1009,7 @@
                 
                 // Verificar se é administrador
                 try {
-                    // Modificação: Usar uma consulta mais eficiente
+                    // Usando o documento com o email como ID
                     const adminDoc = await db.collection('admins').doc(user.email).get();
                     isAdmin = adminDoc.exists;
                     
